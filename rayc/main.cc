@@ -100,15 +100,15 @@ int main(int argc, char ** argv) {
   rayc::Raycaster raycaster(datadir, "fonts/joystix.ttf");
 
   rayc::BaseLayer base(&app, WIDTH, HEIGHT, &raycaster);
-  // rayc::SceneLayer scene(&app, WIDTH, HEIGHT, &raycaster);
-  rayc::SceneDDALayer scene(&app, WIDTH, HEIGHT, &raycaster);
+  rayc::SceneLayer scene(&app, WIDTH, HEIGHT, &raycaster);
+  //rayc::SceneDDALayer scene(&app, WIDTH, HEIGHT, &raycaster);
   rayc::ConsoleLayer console(&app, WIDTH, HEIGHT, &raycaster);
 
   app.pushLayer(&base);
   app.pushLayer(&scene);
   app.pushLayer(&console);
 
-  app.setFpsCap(5);
+  app.setFpsCap(60);
   app.run();
 
   return 0;

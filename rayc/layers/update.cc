@@ -29,7 +29,7 @@ void rayc::UpdateLayer::onFrameUpdate(float frame_time) {
   }
 
   // Movement
-  /*if (getApp()->getKeyState(SDL_SCANCODE_LEFT).held) {
+  if (getApp()->getKeyState(SDL_SCANCODE_LEFT).held) {
     m_raycaster->m_player_angle -= m_raycaster->m_rotation_speed * frame_time;
   }
 
@@ -75,7 +75,7 @@ void rayc::UpdateLayer::onFrameUpdate(float frame_time) {
       m_raycaster->m_player.x -= cosf(m_raycaster->m_player_angle) * m_raycaster->m_movement_speed * frame_time;
       m_raycaster->m_player.y += sinf(m_raycaster->m_player_angle) * m_raycaster->m_movement_speed * frame_time;
     }
-  }*/
+  }
 
   /*if (getApp()->getKeyState(SDL_SCANCODE_SPACE).pressed) {
     objects_.push_back({0,
@@ -87,7 +87,7 @@ void rayc::UpdateLayer::onFrameUpdate(float frame_time) {
     )});
   }*/
 
-  double move_speed = m_raycaster->m_movement_speed * frame_time;
+  /*double move_speed = m_raycaster->m_movement_speed * frame_time;
   double rotation_speed = m_raycaster->m_rotation_speed * frame_time;
 
   if (getApp()->getKeyState(SDL_SCANCODE_W).held) {
@@ -132,7 +132,7 @@ void rayc::UpdateLayer::onFrameUpdate(float frame_time) {
     double old_plane_x = m_raycaster->m_plane.x;
     m_raycaster->m_plane.x = m_raycaster->m_plane.x * cos(-rotation_speed) - m_raycaster->m_plane.y * sin(-rotation_speed);
     m_raycaster->m_plane.y = old_plane_x * sin(-rotation_speed) + m_raycaster->m_plane.y * cos(-rotation_speed);
-  }
+  }*/
 
   // Objects update
   for (auto &pair : m_raycaster->m_objects) {

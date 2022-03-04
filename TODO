@@ -1,9 +1,0 @@
- + SceneLayer
- - MenuLayer
- + InputLayer (->UpdateLayer)
- - Doors
- - PauseMenuLayer
- - Transitions (melt) while loading
- - HudLayer
- - WeaponLayer
- - lua integration

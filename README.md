@@ -1,2 +1,3 @@
 # rayc
-RAYCaster
+Raycaster engine with dynamic component system
+

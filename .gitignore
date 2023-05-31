@@ -1,0 +1,22 @@
+
+# C/C++
+*.o
+*.d
+*.a
+*.so
+*.out
+*.dSYM
+
+# MacOS
+.DS_Store
+.locale
+
+# IDE/Editors
+.idea
+.vscode
+*.sw*
+
+# Project specific
+build/
+*.pak
+files/

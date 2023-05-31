@@ -17,6 +17,8 @@ CommandResult builtin_expr(Environment& env, const CommandArgs& args);
 CommandResult builtin_clear(Environment& env, const CommandArgs& args);
 CommandResult builtin_print(Environment& env, const CommandArgs& args);
 CommandResult builtin_read(Environment& env, const CommandArgs& args);
+CommandResult builtin_log(Environment& env, const CommandArgs& args);
+CommandResult builtin_loglvl(Environment& env, const CommandArgs& args);
 // Meta Game Commands
 CommandResult builtin_map(Environment& env, const CommandArgs& args);
 CommandResult builtin_data(Environment& env, const CommandArgs& args);

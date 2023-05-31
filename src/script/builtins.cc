@@ -4,6 +4,7 @@
 #include <rayc/utils/string.h>
 
 #include <rayc/app.h>
+#include <rayc/log.h>
 #include <rayc/data/resources.h>
 
 #include <iostream>
@@ -216,6 +217,37 @@ rayc::CommandResult rayc::script::builtin_read(Environment& env, const CommandAr
   CommandResult result;
 
   _FAIL(2, "Unimplemented");
+
+  return result;
+}
+
+rayc::CommandResult rayc::script::builtin_log(Environment& env, const CommandArgs& args) {
+  CommandResult result;
+
+  if (args.size() < 2) {
+    _FAIL(1, "Usage: log <LEVEL> <ARGS>");
+  }
+
+  std::string msg;
+  for (size_t i = 2; i < args.size(); i++) {
+    msg += args[i] + " ";
+  }
+
+  logf(stringToLogLevel(args[1]), msg);
+
+  return result;
+}
+
+rayc::CommandResult rayc::script::builtin_loglvl(Environment& env, const CommandArgs& args) {
+  CommandResult result;
+
+  if (args.size() == 1) {
+    result.output = logLevelToString(getLogLevel());
+  } else if (args.size() == 2) {
+    setLogLevel(stringToLogLevel(args[1]));
+  } else {
+    _FAIL(1, "Usage: loglvl [level]");
+  }
 
   return result;
 }

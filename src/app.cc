@@ -59,7 +59,8 @@ static struct ApplicationState {
     std::vector<Entry> lines;
     
     std::map<std::string, std::string> env {
-      {"PROMPT", "] "}
+      {"PROMPT", "] "},
+      {"DEBUG", "0"}
     };
 
   } console;
@@ -190,6 +191,8 @@ void rayc::app::init(int width, int height) {
   registerCommand("clear", script::builtin_clear);
   registerCommand("print", script::builtin_print);
   registerCommand("read", script::builtin_read);
+  registerCommand("log", script::builtin_log);
+  registerCommand("loglvl", script::builtin_loglvl);
   registerCommand("map", script::builtin_map);
   registerCommand("data", script::builtin_data);
   registerCommand("view", script::builtin_view);

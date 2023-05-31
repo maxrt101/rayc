@@ -34,6 +34,23 @@ rayc::LogLevel rayc::stringToLogLevel(const std::string& s) {
   return LogLevel::DEBUG;
 }
 
+std::string rayc::logLevelToString(LogLevel level) {
+  switch (level) {
+    case LogLevel::DEBUG:
+      return "debug";
+    case LogLevel::INFO:
+      return "info";
+    case LogLevel::WARNING:
+      return "warning";
+    case LogLevel::ERROR:
+      return "error";
+    case LogLevel::FATAL:
+      return "fatal";
+    default:
+      return "?";
+  }
+}
+
 rayc::LogLevel rayc::getLogLevel() {
   return g_logLevel;
 }

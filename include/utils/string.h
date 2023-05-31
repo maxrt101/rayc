@@ -1,8 +1,9 @@
 #ifndef _RAYC_UTILS_STRING_H_
 #define _RAYC_UTILS_STRING_H_ 1
 
-#include <string>
+#include <functional>
 #include <vector>
+#include <string>
 
 namespace rayc {
 
@@ -11,6 +12,18 @@ std::string strstrip(const std::string& str, char c = ' ');
 
 bool stoi(const std::string& str, int& result);
 bool stof(const std::string& str, float& result);
+
+template <typename T>
+std::string strjoin(const std::vector<T>& vec, const std::string& sep = ", ", std::function<std::string(T)> stringifier = [](T val) { return val; }) {
+  std::string result;
+  for (size_t i = 0; i < vec.size(); i++) {
+    result += stringifier(vec[i]);
+    if (i + 1 < vec.size()) {
+      result += sep;
+    }
+  }
+  return result;
+}
 
 namespace impl {
 

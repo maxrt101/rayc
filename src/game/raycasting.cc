@@ -360,8 +360,6 @@ void rayc::Renderer::render(float frameTime) {
         (screenHeight / 2.0f) + (screenHeight / distanceFromPlayer) / std::cos(objectAngle / 2.0f)
       };
 
-      // TODO: get texture
-
       auto texture = getTexture(object->getCurrentTexture());
 
       if (!texture) {

@@ -15,6 +15,7 @@ enum class LogLevel {
 };
 
 LogLevel stringToLogLevel(const std::string& str);
+std::string logLevelToString(LogLevel level);
 
 void debug(const std::string format, ...);
 void info(const std::string format, ...);

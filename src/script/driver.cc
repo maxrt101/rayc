@@ -2,7 +2,10 @@
 #include <rayc/script/parser.h>
 #include <rayc/script/scanner.h>
 #include <rayc/script/command.h>
+#include <rayc/utils/string.h>
 #include <rayc/log.h>
+
+#include <cstdarg>
 
 using namespace rayc::script;
 using namespace rayc::script::ast;
@@ -26,9 +29,20 @@ void rayc::registerCommand(const std::string& name, Command command) {
 }
 
 
+static void debugPrint(ExecutionContext* ctx, const std::string fmt, ...) {
+  if (ctx->env["DEBUG"] == "1") {
+    va_list list;
+    va_start(list, fmt);
+    rayc::vlogf(rayc::LogLevel::DEBUG, fmt, list);
+    va_end(list);
+  }
+}
+
+
 static rayc::CommandResult runCommand(ExecutionContext* ctx, const std::vector<std::string>& args) {
   if (ctx && args.size()) {
     if (state.commands.find(args[0]) != state.commands.end()) {
+      debugPrint(ctx, "(script) Command '%s'", rayc::strjoin(args, " ").c_str());
       return state.commands[args[0]](ctx->env, args);
     } else if (state.functions.find(args[0]) != state.functions.end()) {
       std::string result; 
@@ -96,9 +110,7 @@ static void processAstNode(ExecutionContext* ctx, Node* node) {
   switch (node->type) {
     case NodeType::STRING:
     case NodeType::VAR:
-      // rayc::error("Unexpected node outside of command (%d)", node->type);
       throw ExecutionException("Unexpected node outside of command (" + std::to_string((int) node->type) + ")");
-      // break;
     case NodeType::COMMAND: {
       auto result = runCommand(ctx, (Command*) node);
       ctx->printer(result.output);
@@ -119,7 +131,7 @@ static void processAstNode(ExecutionContext* ctx, Node* node) {
     case NodeType::IF: {
       If* ifNode = (If*) node;
       if (!ifNode->condition || ifNode->condition->type != NodeType::COMMAND) {
-        throw ExecutionException("no condition in 'if'");
+        throw ExecutionException("No condition in 'if'");
       }
       if (runCommand(ctx, (Command*) ifNode->condition).returnCode == 0) {
         if (ifNode->thenBody) {
@@ -135,7 +147,7 @@ static void processAstNode(ExecutionContext* ctx, Node* node) {
     case NodeType::WHILE: {
         While* whileNode = (While*) node;
         if (!whileNode->condition || whileNode->condition->type != NodeType::COMMAND) {
-          throw ExecutionException("no condition in 'while'");
+          throw ExecutionException("No condition in 'while'");
         }
         while (runCommand(ctx, (Command*) whileNode->condition).returnCode == 0) {
           if (whileNode->body) {

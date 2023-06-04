@@ -7,10 +7,11 @@
 
 #include <chrono>
 
-rayc::Renderer::Renderer() : View("raycaster") {
+rayc::Renderer::Renderer() : View("renderer") {
   mDepthBuffer = new float[app::getWidth()];
   // mFov = app::getWidth() / (app::getHeight() * 2);
   mFov = M_PI / 4.8f;
+  // mFov = M_PI / 2.0f;
 }
 
 rayc::Renderer::~Renderer() {
@@ -43,7 +44,7 @@ void rayc::Renderer::onEvent(const std::string& eventName, std::map<std::string,
     //   // getPlayer().weapons.push_back(); // TODO:
     //   mIsRunning = true;
     // } else {
-    //   error("(raycaster) Can't run if no map is selected");
+    //   error("(renderer) Can't run if no map is selected");
     // }
     run(args["map"]);
   } else if (eventName == "pause") {
@@ -52,10 +53,10 @@ void rayc::Renderer::onEvent(const std::string& eventName, std::map<std::string,
     if (args.find("map") != args.end()) {
       mMapName = args["map"];
     } else {
-      error("(raycaster) Missing required event argument 'map'");
+      error("(renderer) Missing required event argument 'map'");
     }
   } else {
-    error("(raycaster) Unsupported event '%s'", eventName.c_str());
+    error("(renderer) Unsupported event '%s'", eventName.c_str());
   }
 }
 
@@ -69,7 +70,7 @@ void rayc::Renderer::run(const std::string& map) {
   if (mMapName.size()) {
     if (!getMap(mMapName)) {
       mMapName.clear();
-      error("(raycaster) Invalid map");
+      error("(renderer) Invalid map");
       return;
     }
 
@@ -90,7 +91,7 @@ void rayc::Renderer::run(const std::string& map) {
 
     mIsRunning = true;
   } else {
-    error("(raycaster) Can't run if no map is selected");
+    error("(renderer) Can't run if no map is selected");
   }
 }
 

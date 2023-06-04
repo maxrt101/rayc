@@ -28,7 +28,7 @@ class Renderer : public View {
   struct DDAResult {
     bool hitWall = false;
     bool hitDoor = false;
-    
+
     TileHit tile;
     TileHit door; // std::vector<TileHit> doors;
   };

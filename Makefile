@@ -26,6 +26,7 @@ LIBRAYC_SRC := src/version.cc \
                src/renderer/texture.cc \
                src/renderer/utils.cc \
                src/ui/hud.cc \
+               src/ui/alert.cc \
                src/script/ast.cc \
                src/script/scanner.cc \
                src/script/parser.cc \

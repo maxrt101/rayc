@@ -6,6 +6,7 @@
 #include <rayc/data/resources.h>
 #include <rayc/game/map.h>
 #include <rayc/game/raycasting.h>
+#include <rayc/ui/alert.h>
 #include <rayc/ui/hud.h>
 
 #include <iostream>
@@ -239,6 +240,7 @@ int main(int argc, char ** argv) {
 
   rayc::app::registerView(new rayc::Renderer);
   rayc::app::registerView(new rayc::ui::HUD);
+  rayc::app::registerView(new rayc::ui::Alert);
 
   if (!pak.empty()) {
     rayc::loadPak(pak);

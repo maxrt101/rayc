@@ -10,7 +10,13 @@ rayc::ui::HUD::HUD() : View("hud") {}
 rayc::ui::HUD::~HUD() {}
 
 void rayc::ui::HUD::onFrameUpdate(float frameTime) {
-  // if (((Renderer*) app::getView("raycaster"))->isActive()) { // TODO: null check
+  auto rendererView = (Renderer*) app::getView("renderer");
+
+  if (!rendererView || !rendererView->isActive()) {
+    return;
+  }
+
+  // if (((Renderer*) app::getView("renderer"))->isActive()) { // TODO: null check
     char healthBuffer[5] = {0};
     snprintf(healthBuffer, 5, "%4d", getPlayer().health);
     getFont("main2")->draw(

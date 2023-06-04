@@ -259,7 +259,7 @@ rayc::CommandResult rayc::script::builtin_map(Environment& env, const CommandArg
     _FAIL(2, "Usage: map FILE");
   }
 
-  auto view = app::getView("raycaster");
+  auto view = app::getView("renderer");
 
   if (!view) {
     _FAIL(3, "No such view");
@@ -346,7 +346,21 @@ rayc::CommandResult rayc::script::builtin_sendEvent(Environment& env, const Comm
 rayc::CommandResult rayc::script::builtin_alert(Environment& env, const CommandArgs& args) {
   CommandResult result;
 
-  _FAIL(2, "Unimplemented");
+  if (args.size() < 3) {
+    _FAIL(2, "Usage: alert <DURATION> <MSG> ");
+  }
+
+  auto duration = args[1];
+  auto msg = args[2];
+
+
+  auto view = app::getView("alert");
+
+  if (!view) {
+    _FAIL(3, "No view 'alert' found");
+  }
+
+  view->onEvent("add", {{"msg", msg}, {"duration", duration}});
 
   return result;
 }

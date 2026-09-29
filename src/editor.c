@@ -325,10 +325,7 @@ void rayc_process_editor_input(rayc_t * rayc) {
 
   // Switch mode with space
   if (rayc->input.kb[SCANCODE_SPACE].pressed) {
-    // rayc->editor.mode = (rayc->editor.mode == EDITOR_MODE_SELECT) ? EDITOR_MODE_DRAW : EDITOR_MODE_SELECT;
-
     rayc->editor.mode = (rayc->editor.mode + 1) % __EDITOR_MODE_MAX;
-
     rayc->editor.draw_pts.count = 0; // Reset drawing buffer on mode switch
   }
 
@@ -361,6 +358,11 @@ void rayc_process_editor_input(rayc_t * rayc) {
     rayc->editor.edit_cam.x -= (mx - rayc->editor.edit_cam.prev_mouse_x) / rayc->editor.edit_cam.zoom;
     rayc->editor.edit_cam.y -= (my - rayc->editor.edit_cam.prev_mouse_y) / rayc->editor.edit_cam.zoom;
   }
+
+  if (rayc->input.kb[SCANCODE_UP].held)    { rayc->editor.edit_cam.y -= EDITOR_ARROWS_MOVE_SPEED; }
+  if (rayc->input.kb[SCANCODE_DOWN].held)  { rayc->editor.edit_cam.y += EDITOR_ARROWS_MOVE_SPEED; }
+  if (rayc->input.kb[SCANCODE_LEFT].held)  { rayc->editor.edit_cam.x -= EDITOR_ARROWS_MOVE_SPEED; }
+  if (rayc->input.kb[SCANCODE_RIGHT].held) { rayc->editor.edit_cam.x += EDITOR_ARROWS_MOVE_SPEED; }
 
   // Handle Zoom (Using Keyboard since wheel isn't in input_t)
   if (rayc->input.kb[SCANCODE_EQUALS].held) {

@@ -13,15 +13,15 @@
 // #define FOV 90
 #define FOV_MODIFIER 200
 #define H_LOOK_SCALE 32.0f
-#define V_LOOK_RATE 2
-#define TURN_RATE 4
-#define MOVE_RATE 10
+#define V_LOOK_RATE  2
+#define TURN_RATE    4
+#define MOVE_RATE    10
 
 #define SHADING_SCALE 6
 
 #define MAX_DRAW_DIST 1000
 
-#define MAP_GRID_SIZE 32 // 64
+#define MAP_GRID_SIZE 32
 
 #define MAX_SECTORS  32
 #define MAX_WALLS    32
@@ -46,4 +46,5 @@
 
 #define WITH_EDITOR 1
 
-#define EDITOR_MAX_POINTS 64
+#define EDITOR_MAX_POINTS        64
+#define EDITOR_ARROWS_MOVE_SPEED 16

@@ -46,5 +46,6 @@
 
 #define WITH_EDITOR 1
 
+#define EDITOR_WIDTH             100
 #define EDITOR_MAX_POINTS        64
 #define EDITOR_ARROWS_MOVE_SPEED 16

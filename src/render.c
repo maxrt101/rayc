@@ -44,64 +44,95 @@ static int calculate_shade(const wall_t * wall) {
   return shade;
 }
 
-#if 0
-static void draw_floor(player_t * p, color_t fog_base) {
-  float look = CAP_MAX(p->look * 2, HEIGHT); // a trick to make vertical look good
+static void draw_floor_part(
+  rayc_t *  rayc,
+  const int x,
+  const int s,
+  int       y_start,
+  int       y_end,
+  const int wt
+) {
+  const player_t * p = &rayc->player;
+  const map_t * m = &rayc->map;
 
-  float move = p->pos.z / FLOOR_MOVE_SCALE;
-  if (move >= 0.0f && move < 0.001f) move = 0.001f;
-  if (move < 0.0f && move > -0.001f) move = -0.001f;
+  const sector_t * map_sec = &m->sectors[s];
 
-  int y_start = (move > 0) ? CAP_MIN(-look, -HALF_HEIGHT) : -HALF_HEIGHT;
-  int y_end   = (move > 0) ? HALF_HEIGHT : CAP_MAX(-look, HALF_HEIGHT);
+  sector_runtime_t * rt_sec = &rayc->sector_rt[s];
 
-  for (int y = y_start; y < y_end; ++y) {
-    for (int x = -HALF_WIDTH; x < HALF_WIDTH; ++x) {
-      float z = (float)y + look;
+  const int surf_mode = rt_sec->surface;
 
-      if (z == 0) z = 0.001f;
+  const int floor_x = x - HALF_WIDTH;
+  int wall_ofs = 0;
+  int pt = wt;
 
-      float fx = (float)x / z * move;
-      float fy = FOV_MODIFIER / z * move;
+  if (surf_mode == 1) {
+    y_start = rt_sec->surf[x];
+    wall_ofs = map_sec->z1;
+    pt = map_sec->tf;
+  }
 
-      float rx = fx * fast_sin(p->angle) - fy * fast_cos(p->angle) - (p->pos.y / FLOOR_ROTATE_SCALE);
-      float ry = fx * fast_cos(p->angle) + fy * fast_sin(p->angle) + (p->pos.x / FLOOR_ROTATE_SCALE);
+  if (surf_mode == 2) {
+    y_end = rt_sec->surf[x];
+    wall_ofs = map_sec->z2;
+    pt = map_sec->tc;
+  }
 
-      if (rx < 0) {
-        rx = -rx + 1;
-      }
+  const float look_offset = (float)p->look * FOV_MODIFIER / H_LOOK_SCALE;
+  const float cam_z = (float)p->pos.z - (float)wall_ofs;
 
-      if (ry < 0) {
-        ry = -ry + 1;
-      }
+  const float pa_cos = fast_cos(p->angle);
+  const float pa_sin = fast_sin(p->angle);
 
-      if (rx < 0 || rx > FLOOR_MAX_DISTANCE) continue;
-      if (ry < 0 || ry > FLOOR_MAX_DISTANCE) continue;
+  const int y_floor_start = y_start - HALF_HEIGHT;
+  const int y_floor_end = y_end - HALF_HEIGHT;
 
-      // Scale floor color to depth
-      // float intensity = z / (float)HALF_HEIGHT; // 0.0 at the horizon, 1.0 at standard screen bottom
-      // float intensity = (z / (float)HALF_HEIGHT) * (z / (float)HALF_HEIGHT);
-      float intensity = fabs(z) / (float)HALF_HEIGHT;
-      intensity = CLAMP(intensity, 0.0f, 1.0f);
-      float fog = 1.0f - intensity; // The fog factor is the inverse of intensity
+  const int tex_w = rayc->textures[pt].width;
+  const int tex_h = rayc->textures[pt].height;
 
-      if ((int)rx % 2 == (int)ry % 2) {
-        port_draw_pixel(x + HALF_WIDTH, y + HALF_HEIGHT, RGB(
-          255 * intensity + fog_base.r * fog,
-          fog_base.g * fog,
-          fog_base.b * fog
-        ));
-      } else {
-        port_draw_pixel(x + HALF_WIDTH, y + HALF_HEIGHT, RGB(
-          fog_base.r * fog,
-          255 * intensity + fog_base.g * fog,
-          fog_base.b * fog
-        ));
+  for (int y = y_floor_start; y < y_floor_end; ++y) {
+    // Vertical distance from the horizon
+    float z = (float)y + look_offset;
+    if (z == 0.0f) z = 0.001f;
+
+    // Un-project screen coordinates to camera-space depths/widths
+    const float wy = cam_z * FOV_MODIFIER / z;
+    const float wx = (float)floor_x * cam_z / z;
+
+    // The depth of the floor pixel is exactly wy
+    const float floor_depth = wy;
+    const int screen_y = y + HALF_HEIGHT;
+
+    if (screen_y >= 0 && screen_y < HEIGHT) {
+      int buf_idx = x + screen_y * WIDTH;
+
+      if (floor_depth < rayc->z_buffer[buf_idx]) {
+        rayc->z_buffer[buf_idx] = floor_depth;
+
+        // Exact inverse 2D rotation matrix to get absolute world coordinates
+        const float world_x = (float)p->pos.x + (wx * pa_cos) + (wy * pa_sin);
+        const float world_y = (float)p->pos.y + (wy * pa_cos) - (wx * pa_sin);
+
+        // Map world coordinates to the texture block size
+        float tx_float = world_x / MAP_GRID_SIZE;
+        float ty_float = world_y / MAP_GRID_SIZE;
+
+        // Use floorf to wrap negative coordinates in all quadrants
+        tx_float -= floorf(tx_float);
+        ty_float -= floorf(ty_float);
+
+        const int tx = (int)(tx_float * tex_w) % tex_w;
+        const int ty = (int)(ty_float * tex_h) % tex_h;
+
+        color_t c = texture_get_pixel_at(&rayc->textures[pt], tx, ty);
+
+        // Apply shading to floors too based on distance
+        // color_sub(&c, (int)wy / SHADING_SCALE);
+
+        gfx_draw_pixel(x, screen_y, c);
       }
     }
   }
 }
-#endif
 
 static void draw_wall(
   rayc_t * rayc,
@@ -113,10 +144,8 @@ static void draw_wall(
   float z0, float z1,
   float u0, float u1
 ) {
-  const player_t * p = &rayc->player;
   const map_t * m = &rayc->map;
 
-  const sector_t * map_sec = &m->sectors[s];
   sector_runtime_t * rt_sec = &rayc->sector_rt[s];
 
   const int shade = calculate_shade(&m->walls[w]);
@@ -197,77 +226,7 @@ static void draw_wall(
         vt += vt_step;
       }
     } else if (face == 1) { // Floors / Ceilings
-      const int floor_x = x - HALF_WIDTH;
-      int wall_ofs = 0;
-      int pt = wt;
-
-      if (surf_mode == 1) {
-        y_start = rt_sec->surf[x];
-        wall_ofs = map_sec->z1;
-        pt = map_sec->tf;
-      }
-
-      if (surf_mode == 2) {
-        y_end = rt_sec->surf[x];
-        wall_ofs = map_sec->z2;
-        pt = map_sec->tc;
-      }
-
-      const float look_offset = (float)p->look * FOV_MODIFIER / H_LOOK_SCALE;
-      const float cam_z = (float)p->pos.z - (float)wall_ofs;
-
-      const float pa_cos = fast_cos(p->angle);
-      const float pa_sin = fast_sin(p->angle);
-
-      const int y_floor_start = y_start - HALF_HEIGHT;
-      const int y_floor_end = y_end - HALF_HEIGHT;
-
-      const int tex_w = rayc->textures[pt].width;
-      const int tex_h = rayc->textures[pt].height;
-
-      for (int y = y_floor_start; y < y_floor_end; ++y) {
-        // Vertical distance from the horizon
-        float z = (float)y + look_offset;
-        if (z == 0.0f) z = 0.001f;
-
-        // Un-project screen coordinates to camera-space depths/widths
-        const float wy = cam_z * FOV_MODIFIER / z;
-        const float wx = (float)floor_x * cam_z / z;
-
-        // The depth of the floor pixel is exactly wy
-        const float floor_depth = wy;
-        const int screen_y = y + HALF_HEIGHT;
-
-        if (screen_y >= 0 && screen_y < HEIGHT) {
-          int buf_idx = x + screen_y * WIDTH;
-
-          if (floor_depth < rayc->z_buffer[buf_idx]) {
-            rayc->z_buffer[buf_idx] = floor_depth;
-
-            // Exact inverse 2D rotation matrix to get absolute world coordinates
-            const float world_x = (float)p->pos.x + (wx * pa_cos) + (wy * pa_sin);
-            const float world_y = (float)p->pos.y + (wy * pa_cos) - (wx * pa_sin);
-
-            // Map world coordinates to the texture block size
-            float tx_float = world_x / MAP_GRID_SIZE;
-            float ty_float = world_y / MAP_GRID_SIZE;
-
-            // Use floorf to wrap negative coordinates in all quadrants
-            tx_float -= floorf(tx_float);
-            ty_float -= floorf(ty_float);
-
-            const int tx = (int)(tx_float * tex_w) % tex_w;
-            const int ty = (int)(ty_float * tex_h) % tex_h;
-
-            color_t c = texture_get_pixel_at(&rayc->textures[pt], tx, ty);
-
-            // Apply shading to floors too based on distance
-            // color_sub(&c, (int)wy / SHADING_SCALE);
-
-            gfx_draw_pixel(x, screen_y, c);
-          }
-        }
-      }
+      draw_floor_part(rayc, x, s, y_start, y_end, wt);
     }
   }
 }

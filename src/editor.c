@@ -450,19 +450,21 @@ static void process_select_mode(
     }
   }
 
-  // Handle Dragging (with linked vertices)
+  // Handle Dragging (with linked vertices restricted to the active sector)
   if (left_down && rayc->editor.edit_cam.selected_wall != -1 && rayc->editor.edit_cam.selected_vertex != 0) {
     wall_t * sel_wall = &rayc->map.walls[rayc->editor.edit_cam.selected_wall];
 
     int orig_x = (rayc->editor.edit_cam.selected_vertex == 1) ? sel_wall->x1 : sel_wall->x2;
     int orig_y = (rayc->editor.edit_cam.selected_vertex == 1) ? sel_wall->y1 : sel_wall->y2;
 
-    // Only do the work if we actually moved to a new grid coordinate
     if (snapped_x != orig_x || snapped_y != orig_y) {
 
-      // NEW: Check if the target position is already occupied by any vertex
+      int sel_sec_idx = rayc->editor.edit_cam.selected_sector;
+      sector_t * sel_sec = &rayc->map.sectors[sel_sec_idx];
+
+      // Check if target position is occupied by *this specific sector* to prevent 0-length walls
       bool position_occupied = false;
-      for (int w = 0; w < rayc->map.wall_count; ++w) {
+      for (int w = sel_sec->ws; w < sel_sec->we; ++w) {
         if ((rayc->map.walls[w].x1 == snapped_x && rayc->map.walls[w].y1 == snapped_y) ||
             (rayc->map.walls[w].x2 == snapped_x && rayc->map.walls[w].y2 == snapped_y)) {
           position_occupied = true;
@@ -470,9 +472,9 @@ static void process_select_mode(
         }
       }
 
-      // Only update if the spot is free (this also prevents 0-length walls!)
+      // ONLY update walls belonging to the currently selected sector
       if (!position_occupied) {
-        for (int w = 0; w < rayc->map.wall_count; ++w) {
+        for (int w = sel_sec->ws; w < sel_sec->we; ++w) {
           if (rayc->map.walls[w].x1 == orig_x && rayc->map.walls[w].y1 == orig_y) {
             rayc->map.walls[w].x1 = snapped_x;
             rayc->map.walls[w].y1 = snapped_y;
@@ -483,6 +485,7 @@ static void process_select_mode(
           }
         }
       }
+
     }
   }
 

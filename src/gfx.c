@@ -45,7 +45,7 @@ void gfx_draw_rect(const int x, const int y, const int w, const int h, const col
 
 void gfx_fill_rect(const int x, const int y, const int w, const int h, const color_t color) {
   for (int _y = y; _y < y + h; ++_y) {
-    for (int _x = x; _x < y + w; ++_x) {
+    for (int _x = x; _x < x + w; ++_x) {
       gfx_draw_pixel(_x, _y, color);
     }
   }

@@ -339,6 +339,8 @@ void rayc_draw_editor(rayc_t * rayc) {
     }
   }
 
+  gfx_fill_rect(ed_w2s_x(rayc, rayc->player.pos.x), ed_w2s_y(rayc, rayc->player.pos.y), 2, 2, COLOR_MAGENTA);
+
   if (rayc->editor.mode == EDITOR_MODE_DRAW) {
     draw_draw_mode(rayc);
   }

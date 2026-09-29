@@ -35,6 +35,7 @@ typedef struct rayc_s {
   font_t *  font;
 
   sector_runtime_t sector_rt[MAX_SECTORS];
+  float z_buffer[WIDTH * HEIGHT];
 
   file_t    files[MAX_FILES];
   texture_t textures[MAX_TEXTURES];

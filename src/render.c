@@ -180,10 +180,20 @@ static void draw_wall(
         rt_sec->surf[x] = y_top;
       }
 
+      // Calculate the wall depth for this exact column
+      const float wall_depth = 1.0f / iz;
+
       for (int y = y_start; y < y_end; ++y) {
-        color_t c = texture_get_pixel_at(&rayc->textures[wt], (int)ht % rayc->textures[wt].width, (int)vt % rayc->textures[wt].height);
-        color_sub(&c, shade / SHADING_SCALE);
-        gfx_draw_pixel(x, y, c);
+        int buf_idx = x + y * WIDTH;
+
+        // Only draw if it's closer than what's currently on screen
+        if (wall_depth < rayc->z_buffer[buf_idx]) {
+          rayc->z_buffer[buf_idx] = wall_depth;
+
+          color_t c = texture_get_pixel_at(&rayc->textures[wt], (int)ht % rayc->textures[wt].width, (int)vt % rayc->textures[wt].height);
+          color_sub(&c, shade / SHADING_SCALE);
+          gfx_draw_pixel(x, y, c);
+        }
         vt += vt_step;
       }
     } else if (face == 1) { // Floors / Ceilings
@@ -224,27 +234,39 @@ static void draw_wall(
         const float wy = cam_z * FOV_MODIFIER / z;
         const float wx = (float)floor_x * cam_z / z;
 
-        // Exact inverse 2D rotation matrix to get absolute world coordinates
-        const float world_x = (float)p->pos.x + (wx * pa_cos) + (wy * pa_sin);
-        const float world_y = (float)p->pos.y + (wy * pa_cos) - (wx * pa_sin);
+        // The depth of the floor pixel is exactly wy
+        const float floor_depth = wy;
+        const int screen_y = y + HALF_HEIGHT;
 
-        // Map world coordinates to the texture block size
-        float tx_float = world_x / MAP_GRID_SIZE;
-        float ty_float = world_y / MAP_GRID_SIZE;
+        if (screen_y >= 0 && screen_y < HEIGHT) {
+          int buf_idx = x + screen_y * WIDTH;
 
-        // Use floorf to wrap negative coordinates in all quadrants
-        tx_float -= floorf(tx_float);
-        ty_float -= floorf(ty_float);
+          if (floor_depth < rayc->z_buffer[buf_idx]) {
+            rayc->z_buffer[buf_idx] = floor_depth;
 
-        const int tx = (int)(tx_float * tex_w) % tex_w;
-        const int ty = (int)(ty_float * tex_h) % tex_h;
+            // Exact inverse 2D rotation matrix to get absolute world coordinates
+            const float world_x = (float)p->pos.x + (wx * pa_cos) + (wy * pa_sin);
+            const float world_y = (float)p->pos.y + (wy * pa_cos) - (wx * pa_sin);
 
-        color_t c = texture_get_pixel_at(&rayc->textures[pt], tx, ty);
+            // Map world coordinates to the texture block size
+            float tx_float = world_x / MAP_GRID_SIZE;
+            float ty_float = world_y / MAP_GRID_SIZE;
 
-        // Apply shading to floors too based on distance
-        // color_sub(&c, (int)wy / SHADING_SCALE);
+            // Use floorf to wrap negative coordinates in all quadrants
+            tx_float -= floorf(tx_float);
+            ty_float -= floorf(ty_float);
 
-        gfx_draw_pixel(x, y + HALF_HEIGHT, c);
+            const int tx = (int)(tx_float * tex_w) % tex_w;
+            const int ty = (int)(ty_float * tex_h) % tex_h;
+
+            color_t c = texture_get_pixel_at(&rayc->textures[pt], tx, ty);
+
+            // Apply shading to floors too based on distance
+            // color_sub(&c, (int)wy / SHADING_SCALE);
+
+            gfx_draw_pixel(x, screen_y, c);
+          }
+        }
       }
     }
   }
@@ -256,6 +278,10 @@ void rayc_draw_scene(rayc_t * rayc) {
 
   ASSERT_RET(m->sectors && m->walls);
 
+  for (int i = 0; i < WIDTH * HEIGHT; ++i) {
+    rayc->z_buffer[i] = 999999.0f;
+  }
+
   uint16_t render_order[MAX_SECTORS];
   int visible_count = 0;
 
@@ -265,23 +291,36 @@ void rayc_draw_scene(rayc_t * rayc) {
 
   // Find which sectors to actually draw
   for (int s = 0; s < m->sector_count; ++s) {
-    // Find the center of the sector (approximate distance check)
-    // (A better check would be seeing if the sector bounds are inside the camera frustum)
-    const int cx = (m->walls[m->sectors[s].ws].x1 + m->walls[m->sectors[s].we - 1].x2) / 2;
-    const int cy = (m->walls[m->sectors[s].ws].y1 + m->walls[m->sectors[s].we - 1].y2) / 2;
+    // 1. Calculate true 2D bounding box center
+    int min_x = INT16_MAX, max_x = INT16_MIN;
+    int min_y = INT16_MAX, max_y = INT16_MIN;
 
-    const int dist = distance(p->pos.x, p->pos.y, cx, cy);
+    for (int w = m->sectors[s].ws; w < m->sectors[s].we; ++w) {
+      if (m->walls[w].x1 < min_x) min_x = m->walls[w].x1;
+      if (m->walls[w].x1 > max_x) max_x = m->walls[w].x1;
+      if (m->walls[w].y1 < min_y) min_y = m->walls[w].y1;
+      if (m->walls[w].y1 > max_y) max_y = m->walls[w].y1;
+    }
 
-    // Skip if it's too far away
-    if (dist > MAX_DRAW_DIST) continue;
+    int cx = (min_x + max_x) / 2;
+    int cy = (min_y + max_y) / 2;
+    int cz = (m->sectors[s].z1 + m->sectors[s].z2) / 2;
 
-    // We found a visible sector! Assign it to the runtime pool
+    // 2. Calculate distance with heavily weighted Z-axis
+    float dx = (float)(cx - p->pos.x);
+    float dy = (float)(cy - p->pos.y);
+    float dz = (float)(cz - p->pos.z);
+
+    // Multiplying dz*dz artificially forces vertical layers to be prioritized
+    // in the Painter's sort, preventing large lower sectors from popping over small top sectors
+    float z_weight = 4.0f;
+    int dist = (int)(dx * dx + dy * dy + (dz * dz * z_weight));
+
+    if (dist > (MAX_DRAW_DIST * MAX_DRAW_DIST)) continue;
+
     if (visible_count < MAX_SECTORS) {
       rayc->sector_rt[visible_count].map_sector_idx = s;
-
-      // We can use the real distance for sorting now, no frame delay needed!
       rayc->sector_rt[visible_count].distance = dist;
-
       render_order[visible_count] = visible_count;
       visible_count++;
     }
@@ -290,8 +329,8 @@ void rayc_draw_scene(rayc_t * rayc) {
   // Order visible sectors by distance (Painter's Algorithm)
   for (int i = 0; i < visible_count - 1; ++i) {
     for (int j = 0; j < visible_count - i - 1; ++j) {
-      const uint16_t idx_a = render_order[j];
-      const uint16_t idx_b = render_order[j + 1];
+      uint16_t idx_a = render_order[j];
+      uint16_t idx_b = render_order[j + 1];
 
       if (rayc->sector_rt[idx_a].distance < rayc->sector_rt[idx_b].distance) {
         SWAP(render_order[j], render_order[j + 1]);
@@ -301,7 +340,7 @@ void rayc_draw_scene(rayc_t * rayc) {
 
   // Draw sectors
   for (int i = 0; i < visible_count; ++i) {
-    const int rt_idx = render_order[i];
+    int rt_idx = render_order[i];
 
     sector_runtime_t * rt_sec = &rayc->sector_rt[rt_idx];
     sector_t * map_sec = &m->sectors[rt_sec->map_sector_idx];

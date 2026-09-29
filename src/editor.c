@@ -259,7 +259,7 @@ static void draw_sector_edit_panel(rayc_t * rayc) {
   gui_layout_advance(&ui, 12); // Space after header
 
   gui_stepper_i16(&ui, rayc, "z1", &sec->z1, 8, INT16_MIN, INT16_MAX);
-  gui_stepper_i16(&ui, rayc, "x2", &sec->z2, 8, INT16_MIN, INT16_MAX);
+  gui_stepper_i16(&ui, rayc, "z2", &sec->z2, 8, INT16_MIN, INT16_MAX);
   gui_texture_stepper_with_preview(&ui, rayc, "tf", &sec->tf, 24);
   gui_texture_stepper_with_preview(&ui, rayc, "tc", &sec->tc, 24);
 

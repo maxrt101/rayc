@@ -3,7 +3,10 @@
 
 #include <stdio.h>
 
-static void clip_behind_camera(int * x1, int * y1, int * z1, int x2, int y2, int z2) {
+static void clip_behind_camera(
+  int * x1, int * y1, int * z1, float * u1,
+  int   x2, int   y2, int   z2, float   u2
+) {
   float da = *y1;
   float db = y2;
   float d = da - db;
@@ -13,6 +16,10 @@ static void clip_behind_camera(int * x1, int * y1, int * z1, int x2, int y2, int
   *x1 = *x1 + s * (x2 - *x1);
   *y1 = *y1 + s * (y2 - *y1);
   *z1 = *z1 + s * (z2 - *z1);
+
+  if (u1) {
+    *u1 = *u1 + s * (u2 - *u1);
+  }
 
   if (*y1 == 0) { *y1 = 1; }
 }
@@ -96,7 +103,16 @@ static void draw_floor(player_t * p, color_t fog_base) {
 }
 #endif
 
-static void draw_wall(rayc_t * rayc, int x1, int x2, int b1, int b2, int t1, int t2, int s, int w, int face) {
+static void draw_wall(
+  rayc_t * rayc,
+  int x1, int x2,
+  int b1, int b2,
+  int t1, int t2,
+  int s,  int w,
+  int face,
+  float z0, float z1,
+  float u0, float u1
+) {
   const player_t * p = &rayc->player;
   const map_t * m = &rayc->map;
 
@@ -107,8 +123,11 @@ static void draw_wall(rayc_t * rayc, int x1, int x2, int b1, int b2, int t1, int
 
   const int wt = m->walls[w].texture;
 
-  float ht = 0; // Horizontal texture coordinate
-  const float ht_step = (float)rayc->textures[wt].width * m->walls[w].u / (float)(x2 - x1);
+  // Division variables for perspective correction
+  const float iz0 = 1.0f / z0;
+  const float iz1 = 1.0f / z1;
+  const float uz0 = u0 / z0;
+  const float uz1 = u1 / z1;
 
   const int dyb = b2 - b1;
   const int dyt = t2 - t1;
@@ -117,12 +136,20 @@ static void draw_wall(rayc_t * rayc, int x1, int x2, int b1, int b2, int t1, int
 
   const int x1orig = x1; // Store original starting x before clipping
 
-  if (x1 < 0) { ht -= ht_step * x1;  x1 = 0; }
+  if (x1 < 0) { x1 = 0; }
   if (x2 < 0) { x2 = 0; }
   if (x1 > WIDTH) { x1 = WIDTH; }
   if (x2 > WIDTH) { x2 = WIDTH; }
 
   for (int x = x1; x < x2; ++x) {
+    // Interpolation factor t goes from 0.0 to 1.0 across the unclipped wall width
+    float t = (float)(x - x1orig) / (float)dx;
+
+    // Perspective-correct texture coordinate interpolation
+    float iz = iz0 + t * (iz1 - iz0);
+    float uz = uz0 + t * (uz1 - uz0);
+    float ht = (uz / iz) * (float)rayc->textures[wt].width;
+
     int y_bot = dyb * (x - x1orig + 0.5f) / dx + b1;
     int y_top = dyt * (x - x1orig + 0.5f) / dx + t1;
 
@@ -220,8 +247,6 @@ static void draw_wall(rayc_t * rayc, int x1, int x2, int b1, int b2, int t1, int
         gfx_draw_pixel(x, y + HALF_HEIGHT, c);
       }
     }
-
-    ht += ht_step;
   }
 }
 
@@ -318,9 +343,14 @@ void rayc_draw_scene(rayc_t * rayc) {
         int x2 = m->walls[w].x2 - p->pos.x;
         int y2 = m->walls[w].y2 - p->pos.y;
 
+        // Set up initial U coordinates based on the wall texture scale
+        float u0 = 0.0f;
+        float u1 = m->walls[w].u;
+
         if (face) {
           SWAP(x1, x2);
           SWAP(y1, y2);
+          SWAP(u0, u1); // Swap u coords if drawing a backface so the texture isn't reversed
         }
 
         // World X
@@ -349,14 +379,18 @@ void rayc_draw_scene(rayc_t * rayc) {
         if (wy[0] < 1 && wy[1] < 1) { continue; }
 
         if (wy[0] < 1) {
-          clip_behind_camera(&wx[0], &wy[0], &wz[0], wx[1], wy[1], wz[1]);
-          clip_behind_camera(&wx[2], &wy[2], &wz[2], wx[3], wy[3], wz[3]);
+          clip_behind_camera(&wx[0], &wy[0], &wz[0], &u0, wx[1], wy[1], wz[1], u1);
+          clip_behind_camera(&wx[2], &wy[2], &wz[2], NULL, wx[3], wy[3], wz[3], 0);
         }
 
         if (wy[1] < 1) {
-          clip_behind_camera(&wx[1], &wy[1], &wz[1], wx[0], wy[0], wz[0]);
-          clip_behind_camera(&wx[3], &wy[3], &wz[3], wx[2], wy[2], wz[2]);
+          clip_behind_camera(&wx[1], &wy[1], &wz[1], &u1, wx[0], wy[0], wz[0], u0);
+          clip_behind_camera(&wx[3], &wy[3], &wz[3], NULL, wx[2], wy[2], wz[2], 0);
         }
+
+        // Store actual depths for perspective-correct texture mapping
+        float z0 = (float)wy[0];
+        float z1 = (float)wy[1];
 
         // Screen X / Y position flipped for SDL2 top left origin
         wx[0] = wx[0] * FOV_MODIFIER / wy[0] + WIDTH / 2;
@@ -371,7 +405,7 @@ void rayc_draw_scene(rayc_t * rayc) {
         wx[3] = wx[3] * FOV_MODIFIER / wy[3] + WIDTH / 2;
         wy[3] = HEIGHT / 2 - wz[3] * FOV_MODIFIER / wy[3];
 
-        draw_wall(rayc, wx[0], wx[1], wy[0], wy[1], wy[2], wy[3], rt_idx, w, face);
+        draw_wall(rayc, wx[0], wx[1], wy[0], wy[1], wy[2], wy[3], rt_idx, w, face, z0, z1, u0, u1);
       }
 
       const int num_walls = map_sec->we - map_sec->ws;

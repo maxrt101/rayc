@@ -47,7 +47,7 @@
     /* Render Value Text */                                             \
     snprintf(buf, sizeof(buf), __fmt, *val);                            \
     gfx_draw_string(rayc->font, val_x + 3, ctx->cursor_y + 3,           \
-                    RGB(255, 255, 255), buf);                           \
+                    COLOR_WHITE, buf);                                  \
                                                                         \
     /* Render Buttons */                                                \
     if (gui_button(ctx, rayc, minus_x, ctx->cursor_y, btn_w, h, "-")    \
@@ -348,6 +348,16 @@ void rayc_draw_editor(rayc_t * rayc) {
   if (rayc->editor.mode == EDITOR_MODE_SELECT && rayc->editor.edit_cam.selected_sector != -1) {
     draw_sector_edit_panel(rayc);
   }
+
+  int mx = rayc->input.mouse.x;
+  int my = rayc->input.mouse.y;
+
+  float world_mx = ed_s2w_x(rayc, mx);
+  float world_my = ed_s2w_y(rayc, my);
+
+  char buf[16];
+  snprintf(buf, sizeof(buf), "%.0f %.0f", world_mx, world_my);
+  gfx_draw_string(rayc->font, WIDTH - EDITOR_WIDTH + 2, HEIGHT - font_get_height(rayc->font) - 2, COLOR_WHITE, buf);
 }
 
 static void process_draw_mode(
@@ -572,13 +582,13 @@ void rayc_process_editor_input(rayc_t * rayc) {
 
   if (rayc->map.sectors && rayc->map.walls) {
     switch (rayc->editor.mode) {
-      case EDITOR_MODE_DRAW: {
-        process_draw_mode(rayc, left_pressed, world_mx, world_my, snapped_x, snapped_y);
+      case EDITOR_MODE_SELECT: {
+        process_select_mode(rayc, left_down, world_mx, world_my, snapped_x, snapped_y);
         break;
       }
 
-      case EDITOR_MODE_SELECT: {
-        process_select_mode(rayc, left_down, world_mx, world_my, snapped_x, snapped_y);
+      case EDITOR_MODE_DRAW: {
+        process_draw_mode(rayc, left_pressed, world_mx, world_my, snapped_x, snapped_y);
         break;
       }
 

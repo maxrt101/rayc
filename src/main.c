@@ -291,12 +291,15 @@ static void gen_test_resmap(const char * path) {
 #define ARG_CHK() ({ if (i + 1 >= argc) { fprintf(stderr, "%s expect an argument\n", argv[i]); return 1; } })
 
 int main(int argc, char ** argv) {
-  printf("rayc\n");
-
   const char * init_map = NULL;
   const char * init_resmap = NULL;
 
   for (int i = 1; i < argc; ++i) {
+    if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "-help")) {
+      printf("Usage: rayc [-help] [-map FILE] [-resmap FILE] [-gen-test-map FILE] [-gen-test-resmap FILE]\n");
+      return 0;
+    }
+
     if (!strcmp(argv[i], "-gen-test-map")) {
       ARG_CHK();
       gen_test_map(argv[++i]);
@@ -320,25 +323,13 @@ int main(int argc, char ** argv) {
     }
   }
 
+  printf("rayc\n");
+
   sdl_init();
 
   rayc_t rayc;
 
   rayc_init(&rayc);
-
-  // if (file_read_to_buffer(&rayc.files[0], "res/wall1.bmp")) { die("Failed to open wall1"); }
-  // if (file_read_to_buffer(&rayc.files[1], "res/wall2.bmp")) { die("Failed to open wall2"); }
-  // if (file_read_to_buffer(&rayc.files[2], "res/fireblue1.bmp")) { die("Failed to open fireblue1"); }
-  // if (file_read_to_buffer(&rayc.files[3], "res/fireblue2.bmp")) { die("Failed to open fireblue2"); }
-  // if (file_read_to_buffer(&rayc.files[4], "res/metal1.bmp")) { die("Failed to open metal1"); }
-  // if (file_read_to_buffer(&rayc.files[5], "res/metal2.bmp")) { die("Failed to open metal2"); }
-
-  // if (texture_from_file(&rayc.textures[0], &rayc.files[0])) { die("Failed to process texture wall1"); }
-  // if (texture_from_file(&rayc.textures[1], &rayc.files[1])) { die("Failed to process texture wall2"); }
-  // if (texture_from_file(&rayc.textures[2], &rayc.files[2])) { die("Failed to process texture fireblue1"); }
-  // if (texture_from_file(&rayc.textures[3], &rayc.files[3])) { die("Failed to process texture fireblue2"); }
-  // if (texture_from_file(&rayc.textures[4], &rayc.files[4])) { die("Failed to process texture metal1"); }
-  // if (texture_from_file(&rayc.textures[5], &rayc.files[5])) { die("Failed to process texture metal2"); }
 
   if (init_resmap) {
     file_t resmap;
@@ -425,13 +416,14 @@ int main(int argc, char ** argv) {
       }
     }
 
-    SDL_SetRenderDrawColor(sdl.renderer, 130, 130, 130, 255);
+    // SDL_SetRenderDrawColor(sdl.renderer, 130, 130, 130, 255);
+    SDL_SetRenderDrawColor(sdl.renderer, 0, 0, 0, 255);
     SDL_RenderClear(sdl.renderer);
 
     rayc_main(&rayc);
 
     // Show Debug FPS
-    char buf[16];
+    char buf[8];
     snprintf(buf, sizeof(buf), "%d", fps);
 
     gfx_draw_string(&font8x8, WIDTH - font_calc_str_width(&font8x8, buf), 0, COLOR_WHITE, buf);
